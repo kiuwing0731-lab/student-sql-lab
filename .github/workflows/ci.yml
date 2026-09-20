@@ -1,0 +1,50 @@
+name: Verify classroom platform
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Backend tests
+        run: |
+          pip install -r backend/requirements-dev.txt
+          PYTHONPATH=backend pytest -q backend/tests
+
+      - name: Configure and validate Compose
+        run: |
+          python scripts/configure.py
+          docker compose config --quiet
+
+      - name: Build and boot
+        run: docker compose up -d --build --wait --wait-timeout 180
+
+      - name: Validate proxy configuration
+        run: |
+          docker compose exec -T frontend nginx -t
+          docker compose exec -T proxy caddy validate --config /etc/caddy/Caddyfile
+
+      - name: HTTP integration tests
+        run: python scripts/run_smoke.py
+
+      - name: PostgreSQL privilege isolation
+        run: docker compose exec -T backend python - < scripts/check_isolation.py
+
+      - name: Diagnostic logs
+        if: failure()
+        run: docker compose logs --tail=100
+
+      - name: Cleanup disposable CI data
+        if: always()
+        run: docker compose down -v
