@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Student SQL Lab</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      color: #222;
+    }
+
+    header {
+      background: #20232a;
+      color: white;
+      padding: 18px 24px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    header p {
+      margin: 5px 0 0;
+      color: #bbb;
+      font-size: 14px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 25px auto;
+      padding: 0 20px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    button {
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .secondary {
+      background: #555;
+    }
+
+    .danger {
+      background: #dc2626;
+    }
+
+    .editor-box,
+    .result-box {
+      background: white;
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 280px;
+      resize: vertical;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 15px;
+
+      background: #1e1e1e;
+      color: #d4d4d4;
+
+      font-family: Consolas, Monaco, monospace;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    #message {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 5px;
+      display: none;
+    }
+
+    .success {
+      display: block !important;
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .error {
+      display: block !important;
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 9px;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+    }
+
+    tr:nth-child(even) {
+      background: #fafafa;
+    }
+
+    .hint {
+      color: #666;
+      font-size: 13px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 25px;
+      color: #777;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>Student SQL Lab</h1>
+  <p>Practice SQL directly in your browser</p>
+</header>
+
+<div class="container">
+
+  <div class="editor-box">
+
+    <h2>SQL Editor</h2>
+
+    <p class="hint">
+      Try SELECT, INSERT, UPDATE, DELETE, CREATE TABLE, JOIN and more.
+    </p>
+
+    <textarea id="sqlEditor">SELECT * FROM students;</textarea>
+
+    <div class="toolbar">
+
+      <button onclick="runSQL()">
+        ▶ Run SQL
+      </button>
+
+      <button class="secondary" onclick="loadExample()">
+        Load Example
+      </button>
+
+      <button class="danger" onclick="resetDatabase()">
+        Reset Database
+      </button>
+
+    </div>
+
+    <div id="message"></div>
+
+  </div>
+
+
+  <div class="result-box">
+
+    <h2>Results</h2>
+
+    <div id="results">
+      Run a SQL query to see the results.
+    </div>
+
+  </div>
+
+</div>
+
+
+<footer>
+  Student SQL Lab • Browser-based SQLite practice
+</footer>
+
+
+<script>
+
+let db;
+
+
+// -------------------------
+// Start SQLite
+// -------------------------
+
+async function startDatabase() {
+
+  const SQL = await initSqlJs({
+    locateFile: file =>
+      "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/" + file
+  });
+
+  db = new SQL.Database();
+
+  createSampleDatabase();
+
+}
+
+
+// -------------------------
+// Sample database
+// -------------------------
+
+function createSampleDatabase() {
+
+  db.run(`
+    CREATE TABLE students (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      age INTEGER,
+      class TEXT,
+      grade INTEGER
+    );
+  `);
+
+
+  db.run(`
+    INSERT INTO students
+    (name, age, class, grade)
+    VALUES
+
+    ('Amy', 15, '3A', 92),
+    ('David', 15, '3A', 85),
+    ('Sophie', 14, '2B', 78),
+    ('Daniel', 16, '4A', 88),
+    ('Emily', 15, '3B', 95);
+  `);
+
+
+  db.run(`
+    CREATE TABLE courses (
+      id INTEGER PRIMARY KEY,
+      course_name TEXT NOT NULL,
+      teacher TEXT
+    );
+  `);
+
+
+  db.run(`
+    INSERT INTO courses
+    (course_name, teacher)
+    VALUES
+
+    ('Mathematics', 'Mr Lee'),
+    ('Science', 'Ms Wong'),
+    ('Computer Science', 'Mr Chan');
+  `);
+
+}
+
+
+// -------------------------
+// Run SQL
+// -------------------------
+
+function runSQL() {
+
+  const sql =
+    document.getElementById("sqlEditor").value;
+
+  const resultDiv =
+    document.getElementById("results");
+
+  const message =
+    document.getElementById("message");
+
+
+  message.className = "";
+  message.style.display = "none";
+
+
+  try {
+
+    const results = db.exec(sql);
+
+
+    if (results.length === 0) {
+
+      resultDiv.innerHTML =
+        "<p>Query completed successfully.</p>";
+
+      showMessage(
+        "SQL executed successfully.",
+        "success"
+      );
+
+      return;
+
+    }
+
+
+    let html = "";
+
+
+    results.forEach(result => {
+
+      html +=
+        '<div class="table-wrapper">';
+
+      html += "<table>";
+
+      html += "<thead><tr>";
+
+
+      result.columns.forEach(column => {
+
+        html +=
+          "<th>" +
+          escapeHTML(column) +
+          "</th>";
+
+      });
+
+
+      html += "</tr></thead>";
+
+      html += "<tbody>";
+
+
+      result.values.forEach(row => {
+
+        html += "<tr>";
+
+
+        row.forEach(value => {
+
+          html +=
+            "<td>" +
+            escapeHTML(
+              value === null
+                ? "NULL"
+                : String(value)
+            ) +
+            "</td>";
+
+        });
+
+
+        html += "</tr>";
+
+      });
+
+
+      html += "</tbody></table>";
+
+      html += "</div>";
+
+    });
+
+
+    resultDiv.innerHTML = html;
+
+
+    showMessage(
+      "Query completed successfully.",
+      "success"
+    );
+
+
+  } catch (error) {
+
+    resultDiv.innerHTML =
+      "<p>SQL could not be executed.</p>";
+
+    showMessage(
+      error.message,
+      "error"
+    );
+
+  }
+
+}
+
+
+// -------------------------
+// Messages
+// -------------------------
+
+function showMessage(text, type) {
+
+  const message =
+    document.getElementById("message");
+
+  message.textContent = text;
+
+  message.className = type;
+
+}
+
+
+// -------------------------
+// Prevent HTML injection
+// -------------------------
+
+function escapeHTML(text) {
+
+  const div =
+    document.createElement("div");
+
+  div.textContent = text;
+
+  return div.innerHTML;
+
+}
+
+
+// -------------------------
+// Example query
+// -------------------------
+
+function loadExample() {
+
+  document.getElementById(
+    "sqlEditor"
+  ).value =
+`SELECT name, class, grade
+FROM students
+WHERE grade >= 85
+ORDER BY grade DESC;`;
+
+}
+
+
+// -------------------------
+// Reset database
+// -------------------------
+
+async function resetDatabase() {
+
+  if (
+    !confirm(
+      "Reset the database? All your changes will be deleted."
+    )
+  ) {
+    return;
+  }
+
+
+  db.close();
+
+  await startDatabase();
+
+
+  document.getElementById(
+    "sqlEditor"
+  ).value =
+    "SELECT * FROM students;";
+
+
+  document.getElementById(
+    "results"
+  ).innerHTML =
+    "Database reset. Run a query to continue.";
+
+
+  showMessage(
+    "Database reset successfully.",
+    "success"
+  );
+
+}
+
+
+// Start everything
+
+startDatabase();
+
+</script>
+
+</body>
+</html>
