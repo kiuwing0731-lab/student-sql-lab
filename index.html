@@ -481,10 +481,16 @@ function runSQL() {
     return;
   }
 
-  const query = document
-    .getElementById("sqlEditor")
-    .value
-    .trim();
+  clet query = document
+  .getElementById("sqlEditor")
+  .value;
+
+// Allow // to be used as comments
+query = query
+  .split("\n")
+  .filter(line => !line.trim().startsWith("//"))
+  .join("\n")
+  .trim();
 
   const resultsBox =
     document.getElementById("results");
