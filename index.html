@@ -1,17 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student SQL Lab</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -34,12 +31,11 @@
     header p {
       margin: 5px 0 0;
       color: #bbb;
-      font-size: 14px;
     }
 
     .container {
-      max-width: 1200px;
-      margin: 25px auto;
+      max-width: 1300px;
+      margin: 22px auto;
       padding: 0 20px;
     }
 
@@ -47,38 +43,44 @@
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      margin-bottom: 15px;
+      margin-bottom: 18px;
     }
 
-    button {
+    button, .file-button {
       border: none;
       border-radius: 6px;
-      padding: 10px 16px;
+      padding: 10px 15px;
       font-size: 14px;
       cursor: pointer;
       background: #2563eb;
       color: white;
+      display: inline-block;
     }
 
-    button:hover {
-      opacity: 0.9;
+    button:hover, .file-button:hover {
+      opacity: .88;
     }
 
-    .secondary {
-      background: #555;
+    .secondary { background: #555; }
+    .success-button { background: #16803c; }
+    .danger { background: #dc2626; }
+
+    input[type="file"] {
+      display: none;
     }
 
-    .danger {
-      background: #dc2626;
+    .layout {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      gap: 18px;
     }
 
-    .editor-box,
-    .result-box {
+    .panel {
       background: white;
       border-radius: 8px;
       padding: 18px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      margin-bottom: 18px;
     }
 
     h2 {
@@ -86,36 +88,53 @@
       font-size: 18px;
     }
 
+    #tables {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #tables li {
+      padding: 9px;
+      margin-bottom: 5px;
+      background: #f1f5f9;
+      border-radius: 5px;
+      cursor: pointer;
+      word-break: break-word;
+    }
+
+    #tables li:hover {
+      background: #dbeafe;
+    }
+
     textarea {
       width: 100%;
-      height: 280px;
+      min-height: 300px;
       resize: vertical;
-      border: 1px solid #ccc;
-      border-radius: 6px;
       padding: 15px;
-
+      border: 1px solid #444;
+      border-radius: 6px;
       background: #1e1e1e;
       color: #d4d4d4;
-
       font-family: Consolas, Monaco, monospace;
       font-size: 15px;
       line-height: 1.5;
     }
 
     #message {
+      display: none;
       margin-top: 12px;
       padding: 10px;
       border-radius: 5px;
-      display: none;
     }
 
-    .success {
+    .message-success {
       display: block !important;
       background: #dcfce7;
       color: #166534;
     }
 
-    .error {
+    .message-error {
       display: block !important;
       background: #fee2e2;
       color: #991b1b;
@@ -123,16 +142,15 @@
 
     .table-wrapper {
       overflow-x: auto;
+      margin-bottom: 20px;
     }
 
     table {
-      border-collapse: collapse;
       width: 100%;
-      margin-top: 10px;
+      border-collapse: collapse;
     }
 
-    th,
-    td {
+    th, td {
       border: 1px solid #ddd;
       padding: 9px;
       text-align: left;
@@ -146,7 +164,7 @@
       background: #fafafa;
     }
 
-    .hint {
+    .small {
       color: #666;
       font-size: 13px;
     }
@@ -156,6 +174,12 @@
       padding: 25px;
       color: #777;
       font-size: 13px;
+    }
+
+    @media (max-width: 800px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -169,43 +193,102 @@
 
 <div class="container">
 
-  <div class="editor-box">
-
-    <h2>SQL Editor</h2>
-
-    <p class="hint">
-      Try SELECT, INSERT, UPDATE, DELETE, CREATE TABLE, JOIN and more.
-    </p>
-
-    <textarea id="sqlEditor">SELECT * FROM students;</textarea>
-
+  <div class="panel">
     <div class="toolbar">
 
-      <button onclick="runSQL()">
-        ▶ Run SQL
+      <label class="file-button">
+        📂 Import Database
+        <input
+          type="file"
+          id="databaseFile"
+          accept=".db,.sqlite,.sqlite3"
+        >
+      </label>
+
+      <label class="file-button">
+        📄 Import SQL
+        <input
+          type="file"
+          id="sqlFile"
+          accept=".sql"
+        >
+      </label>
+
+      <button
+        class="success-button"
+        onclick="exportDatabase()"
+      >
+        💾 Export Database
       </button>
 
-      <button class="secondary" onclick="loadExample()">
+      <button
+        class="secondary"
+        onclick="loadExample()"
+      >
         Load Example
       </button>
 
-      <button class="danger" onclick="resetDatabase()">
-        Reset Database
+      <button
+        class="danger"
+        onclick="resetDatabase()"
+      >
+        Reset
       </button>
 
     </div>
 
     <div id="message"></div>
-
   </div>
 
 
-  <div class="result-box">
+  <div class="layout">
 
-    <h2>Results</h2>
+    <div>
 
-    <div id="results">
-      Run a SQL query to see the results.
+      <div class="panel">
+
+        <h2>Tables</h2>
+
+        <p class="small">
+          Click a table to view its data.
+        </p>
+
+        <ul id="tables">
+          <li>Loading...</li>
+        </ul>
+
+      </div>
+
+    </div>
+
+
+    <div>
+
+      <div class="panel">
+
+        <h2>SQL Editor</h2>
+
+        <textarea id="sqlEditor">SELECT * FROM students;</textarea>
+
+        <br><br>
+
+        <button onclick="runSQL()">
+          ▶ Run SQL
+        </button>
+
+      </div>
+
+
+      <div class="panel">
+
+        <h2>Results</h2>
+
+        <div id="results">
+          Run a query to see the results.
+        </div>
+
+      </div>
+
     </div>
 
   </div>
@@ -214,38 +297,54 @@
 
 
 <footer>
-  Student SQL Lab • Browser-based SQLite practice
+  Student SQL Lab • SQLite runs locally in your browser
 </footer>
 
 
 <script>
 
+let SQL;
 let db;
 
 
-// -------------------------
-// Start SQLite
-// -------------------------
+// -----------------------
+// START
+// -----------------------
 
-async function startDatabase() {
+async function start() {
 
-  const SQL = await initSqlJs({
-    locateFile: file =>
-      "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/" + file
-  });
+  try {
 
-  db = new SQL.Database();
+    SQL = await initSqlJs({
+      locateFile: file =>
+        "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/" + file
+    });
 
-  createSampleDatabase();
+    createDefaultDatabase();
+
+  } catch (error) {
+
+    showMessage(
+      "Could not start SQLite: " + error.message,
+      "error"
+    );
+
+  }
 
 }
 
 
-// -------------------------
-// Sample database
-// -------------------------
+// -----------------------
+// DEFAULT DATABASE
+// -----------------------
 
-function createSampleDatabase() {
+function createDefaultDatabase() {
+
+  if (db) {
+    db.close();
+  }
+
+  db = new SQL.Database();
 
   db.run(`
     CREATE TABLE students (
@@ -255,156 +354,61 @@ function createSampleDatabase() {
       class TEXT,
       grade INTEGER
     );
-  `);
 
-
-  db.run(`
     INSERT INTO students
     (name, age, class, grade)
     VALUES
-
     ('Amy', 15, '3A', 92),
     ('David', 15, '3A', 85),
     ('Sophie', 14, '2B', 78),
     ('Daniel', 16, '4A', 88),
     ('Emily', 15, '3B', 95);
-  `);
 
 
-  db.run(`
     CREATE TABLE courses (
       id INTEGER PRIMARY KEY,
       course_name TEXT NOT NULL,
       teacher TEXT
     );
-  `);
 
-
-  db.run(`
     INSERT INTO courses
     (course_name, teacher)
     VALUES
-
     ('Mathematics', 'Mr Lee'),
     ('Science', 'Ms Wong'),
     ('Computer Science', 'Mr Chan');
   `);
 
+  refreshTables();
+
 }
 
 
-// -------------------------
-// Run SQL
-// -------------------------
+// -----------------------
+// RUN SQL
+// -----------------------
 
 function runSQL() {
 
-  const sql =
+  if (!db) return;
+
+  const query =
     document.getElementById("sqlEditor").value;
-
-  const resultDiv =
-    document.getElementById("results");
-
-  const message =
-    document.getElementById("message");
-
-
-  message.className = "";
-  message.style.display = "none";
-
 
   try {
 
-    const results = db.exec(sql);
+    const results = db.exec(query);
 
+    displayResults(results);
 
-    if (results.length === 0) {
-
-      resultDiv.innerHTML =
-        "<p>Query completed successfully.</p>";
-
-      showMessage(
-        "SQL executed successfully.",
-        "success"
-      );
-
-      return;
-
-    }
-
-
-    let html = "";
-
-
-    results.forEach(result => {
-
-      html +=
-        '<div class="table-wrapper">';
-
-      html += "<table>";
-
-      html += "<thead><tr>";
-
-
-      result.columns.forEach(column => {
-
-        html +=
-          "<th>" +
-          escapeHTML(column) +
-          "</th>";
-
-      });
-
-
-      html += "</tr></thead>";
-
-      html += "<tbody>";
-
-
-      result.values.forEach(row => {
-
-        html += "<tr>";
-
-
-        row.forEach(value => {
-
-          html +=
-            "<td>" +
-            escapeHTML(
-              value === null
-                ? "NULL"
-                : String(value)
-            ) +
-            "</td>";
-
-        });
-
-
-        html += "</tr>";
-
-      });
-
-
-      html += "</tbody></table>";
-
-      html += "</div>";
-
-    });
-
-
-    resultDiv.innerHTML = html;
-
+    refreshTables();
 
     showMessage(
-      "Query completed successfully.",
+      "SQL executed successfully.",
       "success"
     );
 
-
   } catch (error) {
-
-    resultDiv.innerHTML =
-      "<p>SQL could not be executed.</p>";
 
     showMessage(
       error.message,
@@ -416,41 +420,309 @@ function runSQL() {
 }
 
 
-// -------------------------
-// Messages
-// -------------------------
+// -----------------------
+// DISPLAY RESULTS
+// -----------------------
 
-function showMessage(text, type) {
+function displayResults(results) {
 
-  const message =
-    document.getElementById("message");
+  const output =
+    document.getElementById("results");
 
-  message.textContent = text;
+  if (results.length === 0) {
 
-  message.className = type;
+    output.innerHTML =
+      "<p>Command completed successfully.</p>";
+
+    return;
+
+  }
+
+  let html = "";
+
+  results.forEach(result => {
+
+    html += '<div class="table-wrapper">';
+    html += "<table>";
+
+    html += "<thead><tr>";
+
+    result.columns.forEach(column => {
+
+      html +=
+        "<th>" +
+        escapeHTML(column) +
+        "</th>";
+
+    });
+
+    html += "</tr></thead><tbody>";
+
+
+    result.values.forEach(row => {
+
+      html += "<tr>";
+
+      row.forEach(value => {
+
+        html +=
+          "<td>" +
+          escapeHTML(
+            value === null
+              ? "NULL"
+              : String(value)
+          ) +
+          "</td>";
+
+      });
+
+      html += "</tr>";
+
+    });
+
+
+    html += "</tbody></table>";
+    html += "</div>";
+
+  });
+
+  output.innerHTML = html;
 
 }
 
 
-// -------------------------
-// Prevent HTML injection
-// -------------------------
+// -----------------------
+// TABLE LIST
+// -----------------------
 
-function escapeHTML(text) {
+function refreshTables() {
 
-  const div =
-    document.createElement("div");
+  const list =
+    document.getElementById("tables");
 
-  div.textContent = text;
+  list.innerHTML = "";
 
-  return div.innerHTML;
+  try {
+
+    const result = db.exec(`
+      SELECT name
+      FROM sqlite_master
+      WHERE type='table'
+      AND name NOT LIKE 'sqlite_%'
+      ORDER BY name;
+    `);
+
+    if (
+      result.length === 0 ||
+      result[0].values.length === 0
+    ) {
+
+      list.innerHTML =
+        "<li>No tables</li>";
+
+      return;
+
+    }
+
+    result[0].values.forEach(row => {
+
+      const tableName = row[0];
+
+      const item =
+        document.createElement("li");
+
+      item.textContent =
+        "▦ " + tableName;
+
+      item.onclick = () =>
+        viewTable(tableName);
+
+      list.appendChild(item);
+
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+  }
 
 }
 
 
-// -------------------------
-// Example query
-// -------------------------
+// -----------------------
+// VIEW TABLE
+// -----------------------
+
+function viewTable(tableName) {
+
+  const safeName =
+    tableName.replace(/"/g, '""');
+
+  document.getElementById(
+    "sqlEditor"
+  ).value =
+    `SELECT * FROM "${safeName}";`;
+
+  runSQL();
+
+}
+
+
+// -----------------------
+// IMPORT DATABASE
+// -----------------------
+
+document.getElementById(
+  "databaseFile"
+).addEventListener(
+  "change",
+  async function(event) {
+
+    const file =
+      event.target.files[0];
+
+    if (!file) return;
+
+    try {
+
+      const buffer =
+        await file.arrayBuffer();
+
+      const data =
+        new Uint8Array(buffer);
+
+      const newDatabase =
+        new SQL.Database(data);
+
+      if (db) {
+        db.close();
+      }
+
+      db = newDatabase;
+
+      refreshTables();
+
+      document.getElementById(
+        "results"
+      ).innerHTML =
+        "<p>Database imported successfully.</p>";
+
+      showMessage(
+        "Loaded database: " + file.name,
+        "success"
+      );
+
+    } catch (error) {
+
+      showMessage(
+        "Could not open database: " +
+        error.message,
+        "error"
+      );
+
+    }
+
+    event.target.value = "";
+
+  }
+);
+
+
+// -----------------------
+// IMPORT SQL FILE
+// -----------------------
+
+document.getElementById(
+  "sqlFile"
+).addEventListener(
+  "change",
+  async function(event) {
+
+    const file =
+      event.target.files[0];
+
+    if (!file) return;
+
+    try {
+
+      const text =
+        await file.text();
+
+      document.getElementById(
+        "sqlEditor"
+      ).value = text;
+
+      showMessage(
+        "SQL file loaded into the editor. Press Run SQL to execute it.",
+        "success"
+      );
+
+    } catch (error) {
+
+      showMessage(
+        "Could not read SQL file.",
+        "error"
+      );
+
+    }
+
+    event.target.value = "";
+
+  }
+);
+
+
+// -----------------------
+// EXPORT DATABASE
+// -----------------------
+
+function exportDatabase() {
+
+  if (!db) return;
+
+  const data =
+    db.export();
+
+  const blob =
+    new Blob(
+      [data],
+      {
+        type:
+          "application/x-sqlite3"
+      }
+    );
+
+  const url =
+    URL.createObjectURL(blob);
+
+  const link =
+    document.createElement("a");
+
+  link.href = url;
+
+  link.download =
+    "student-database.sqlite";
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  link.remove();
+
+  URL.revokeObjectURL(url);
+
+  showMessage(
+    "Database exported.",
+    "success"
+  );
+
+}
+
+
+// -----------------------
+// EXAMPLE
+// -----------------------
 
 function loadExample() {
 
@@ -465,37 +737,30 @@ ORDER BY grade DESC;`;
 }
 
 
-// -------------------------
-// Reset database
-// -------------------------
+// -----------------------
+// RESET
+// -----------------------
 
-async function resetDatabase() {
+function resetDatabase() {
 
-  if (
-    !confirm(
-      "Reset the database? All your changes will be deleted."
-    )
-  ) {
-    return;
-  }
+  const confirmed =
+    confirm(
+      "Reset the database? Your current changes will be lost."
+    );
 
+  if (!confirmed) return;
 
-  db.close();
-
-  await startDatabase();
-
+  createDefaultDatabase();
 
   document.getElementById(
     "sqlEditor"
   ).value =
     "SELECT * FROM students;";
 
-
   document.getElementById(
     "results"
   ).innerHTML =
-    "Database reset. Run a query to continue.";
-
+    "<p>Database reset.</p>";
 
   showMessage(
     "Database reset successfully.",
@@ -505,9 +770,42 @@ async function resetDatabase() {
 }
 
 
-// Start everything
+// -----------------------
+// MESSAGE
+// -----------------------
 
-startDatabase();
+function showMessage(text, type) {
+
+  const box =
+    document.getElementById("message");
+
+  box.textContent = text;
+
+  box.className =
+    type === "success"
+      ? "message-success"
+      : "message-error";
+
+}
+
+
+// -----------------------
+// HTML SAFETY
+// -----------------------
+
+function escapeHTML(value) {
+
+  const div =
+    document.createElement("div");
+
+  div.textContent = value;
+
+  return div.innerHTML;
+
+}
+
+
+start();
 
 </script>
 
