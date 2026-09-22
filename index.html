@@ -8,7 +8,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
 
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -35,6 +37,924 @@
 
     .container {
       max-width: 1300px;
+      margin: 22px auto;
+      padding: 0 20px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    button,
+    .file-button {
+      border: none;
+      border-radius: 6px;
+      padding: 10px 15px;
+      font-size: 14px;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+      display: inline-block;
+    }
+
+    button:hover,
+    .file-button:hover {
+      opacity: 0.88;
+    }
+
+    .secondary {
+      background: #555;
+    }
+
+    .success-button {
+      background: #16803c;
+    }
+
+    .danger {
+      background: #dc2626;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      gap: 18px;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      margin-bottom: 18px;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+
+    #tables {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #tables li {
+      padding: 9px;
+      margin-bottom: 5px;
+      background: #f1f5f9;
+      border-radius: 5px;
+      cursor: pointer;
+      word-break: break-word;
+    }
+
+    #tables li:hover {
+      background: #dbeafe;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 300px;
+      resize: vertical;
+      padding: 15px;
+      border: 1px solid #444;
+      border-radius: 6px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    #message {
+      display: none;
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .message-success {
+      display: block !important;
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .message-error {
+      display: block !important;
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 9px;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+    }
+
+    tr:nth-child(even) {
+      background: #fafafa;
+    }
+
+    .small {
+      color: #666;
+      font-size: 13px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 25px;
+      color: #777;
+      font-size: 13px;
+    }
+
+    @media (max-width: 800px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>Student SQL Lab</h1>
+  <p>Practice SQL directly in your browser</p>
+</header>
+
+<div class="container">
+
+  <!-- Toolbar -->
+  <div class="panel">
+    <div class="toolbar">
+
+      <label class="file-button">
+        📂 Import Database
+        <input
+          type="file"
+          id="databaseFile"
+          accept=".db,.sqlite,.sqlite3"
+        >
+      </label>
+
+      <label class="file-button">
+        📄 Import SQL
+        <input
+          type="file"
+          id="sqlFile"
+          accept=".sql"
+        >
+      </label>
+
+      <button
+        class="success-button"
+        onclick="exportDatabase()"
+      >
+        💾 Export Database
+      </button>
+
+      <button
+        class="secondary"
+        onclick="loadExample()"
+      >
+        Load Example
+      </button>
+
+      <button
+        class="danger"
+        onclick="resetDatabase()"
+      >
+        Reset
+      </button>
+
+    </div>
+
+    <div id="message"></div>
+  </div>
+
+
+  <div class="layout">
+
+    <!-- Left side -->
+    <div>
+
+      <div class="panel">
+
+        <h2>Tables</h2>
+
+        <p class="small">
+          Click a table to view its data.
+        </p>
+
+        <ul id="tables">
+          <li>Loading...</li>
+        </ul>
+
+      </div>
+
+    </div>
+
+
+    <!-- Right side -->
+    <div>
+
+      <div class="panel">
+
+        <h2>SQL Editor</h2>
+
+        <textarea id="sqlEditor">SELECT * FROM students;</textarea>
+
+        <br><br>
+
+        <button onclick="runSQL()">
+          ▶ Run SQL
+        </button>
+
+      </div>
+
+
+      <div class="panel">
+
+        <h2>Results</h2>
+
+        <div id="results">
+          Run a query to see the results.
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<footer>
+  Student SQL Lab • SQLite runs locally in your browser
+</footer>
+
+
+<script>
+
+let SQL;
+let db;
+
+
+// ==================================================
+// START
+// ==================================================
+
+async function start() {
+
+  try {
+
+    SQL = await initSqlJs({
+      locateFile: file =>
+        "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/" + file
+    });
+
+    createDefaultDatabase();
+
+  } catch (error) {
+
+    console.error("SQLite startup error:", error);
+
+    showMessage(
+      "Could not start SQLite: " + error.message,
+      "error"
+    );
+
+    document.getElementById("tables").innerHTML =
+      "<li>Failed to load database</li>";
+  }
+}
+
+
+// ==================================================
+// DEFAULT DATABASE
+// ==================================================
+
+function createDefaultDatabase() {
+
+  if (db) {
+    db.close();
+  }
+
+  db = new SQL.Database();
+
+  db.run(`
+
+    /* =========================
+       TABLE 1: STUDENTS
+       ========================= */
+
+    CREATE TABLE students (
+      student_id INTEGER PRIMARY KEY,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      age INTEGER,
+      class_name TEXT,
+      email TEXT,
+      date_of_birth DATE,
+      active BOOLEAN
+    );
+
+    INSERT INTO students
+    (student_id, first_name, last_name, age, class_name, email, date_of_birth, active)
+    VALUES
+    (1, 'Amy', 'Chan', 15, '3A', 'amy@example.com', '2011-03-12', 1),
+    (2, 'David', 'Wong', 15, '3A', 'david@example.com', '2011-07-25', 1),
+    (3, 'Sophie', 'Lee', 14, '2B', 'sophie@example.com', '2012-01-18', 1),
+    (4, 'Daniel', 'Lim', 16, '4A', 'daniel@example.com', '2010-09-04', 1),
+    (5, 'Emily', 'Tan', 15, '3B', 'emily@example.com', '2011-05-30', 1),
+    (6, 'Jason', 'Ng', 14, '2A', 'jason@example.com', '2012-08-11', 1),
+    (7, 'Olivia', 'Ho', 16, '4B', 'olivia@example.com', '2010-02-22', 1),
+    (8, 'Ryan', 'Cheung', 15, '3A', 'ryan@example.com', '2011-11-09', 1),
+    (9, 'Chloe', 'Lau', 14, '2B', NULL, '2012-06-17', 1),
+    (10, 'Ethan', 'Yip', 16, '4A', 'ethan@example.com', '2010-04-03', 0),
+    (11, 'Grace', 'Lam', 15, '3B', 'grace@example.com', '2011-12-15', 1),
+    (12, 'Lucas', 'Koh', 14, '2A', NULL, '2012-10-28', 1),
+    (13, 'Hannah', 'Chow', 16, '4B', 'hannah@example.com', '2010-01-19', 1),
+    (14, 'Nathan', 'Teo', 15, '3A', 'nathan@example.com', '2011-08-06', 1),
+    (15, 'Isabella', 'Mak', 14, '2B', 'isabella@example.com', '2012-04-14', 0);
+
+
+    /* =========================
+       TABLE 2: COURSES
+       ========================= */
+
+    CREATE TABLE courses (
+      course_id INTEGER PRIMARY KEY,
+      course_name TEXT NOT NULL,
+      department TEXT,
+      teacher TEXT,
+      credits INTEGER,
+      course_fee REAL,
+      start_date DATE,
+      available BOOLEAN
+    );
+
+    INSERT INTO courses
+    (course_id, course_name, department, teacher, credits, course_fee, start_date, available)
+    VALUES
+    (101, 'Mathematics', 'Mathematics', 'Mr Lee', 4, 450.50, '2026-09-01', 1),
+    (102, 'Computer Science', 'Technology', 'Mr Chan', 5, 620.00, '2026-09-02', 1),
+    (103, 'Physics', 'Science', 'Ms Wong', 4, 510.75, '2026-09-03', 1),
+    (104, 'Chemistry', 'Science', 'Dr Lim', 4, 530.25, '2026-09-03', 1),
+    (105, 'English', 'Languages', 'Ms Tan', 3, 390.00, '2026-09-04', 1),
+    (106, 'History', 'Humanities', 'Mr Ho', 3, 370.50, '2026-09-05', 1),
+    (107, 'Economics', 'Humanities', 'Ms Lau', 4, 480.00, '2026-09-05', 1),
+    (108, 'Biology', 'Science', 'Dr Ng', 4, 525.50, '2026-09-06', 0);
+
+
+    /* =========================
+       TABLE 3: ENROLLMENTS
+       ========================= */
+
+    CREATE TABLE enrollments (
+      enrollment_id INTEGER PRIMARY KEY,
+      student_id INTEGER NOT NULL,
+      course_id INTEGER NOT NULL,
+      enrollment_date DATE,
+      score REAL,
+      attendance_rate REAL,
+      passed BOOLEAN,
+
+      FOREIGN KEY (student_id)
+        REFERENCES students(student_id),
+
+      FOREIGN KEY (course_id)
+        REFERENCES courses(course_id)
+    );
+
+    INSERT INTO enrollments
+    (enrollment_id, student_id, course_id, enrollment_date, score, attendance_rate, passed)
+    VALUES
+    (1001, 1, 101, '2026-09-01', 92.5, 98.0, 1),
+    (1002, 1, 102, '2026-09-01', 88.0, 96.5, 1),
+    (1003, 2, 101, '2026-09-01', 76.5, 90.0, 1),
+    (1004, 2, 103, '2026-09-02', 81.0, 94.5, 1),
+    (1005, 3, 105, '2026-09-02', 69.5, 87.0, 1),
+    (1006, 3, 106, '2026-09-03', 72.0, 89.5, 1),
+    (1007, 4, 102, '2026-09-01', 95.0, 99.0, 1),
+    (1008, 4, 103, '2026-09-01', 91.5, 97.5, 1),
+    (1009, 5, 104, '2026-09-03', 84.0, 93.0, 1),
+    (1010, 5, 105, '2026-09-03', 89.5, 95.0, 1),
+    (1011, 6, 101, '2026-09-04', 58.0, 78.5, 0),
+    (1012, 6, 106, '2026-09-04', 64.5, 82.0, 1),
+    (1013, 7, 102, '2026-09-01', 97.5, 100.0, 1),
+    (1014, 7, 107, '2026-09-02', 90.0, 98.0, 1),
+    (1015, 8, 103, '2026-09-03', 73.0, 88.0, 1),
+    (1016, 8, 104, '2026-09-03', 67.5, 85.5, 1),
+    (1017, 9, 105, '2026-09-04', 82.5, 91.0, 1),
+    (1018, 10, 107, '2026-09-05', 55.0, 70.0, 0),
+    (1019, 11, 101, '2026-09-01', 86.5, 96.0, 1),
+    (1020, 11, 102, '2026-09-02', 93.0, 97.0, 1),
+    (1021, 12, 106, '2026-09-05', 74.5, 88.5, 1),
+    (1022, 13, 103, '2026-09-02', 96.0, 99.5, 1),
+    (1023, 13, 104, '2026-09-02', 94.5, 98.5, 1),
+    (1024, 14, 101, '2026-09-01', 79.0, 92.0, 1),
+    (1025, 14, 107, '2026-09-05', NULL, 89.0, NULL),
+    (1026, 15, 105, '2026-09-04', 61.5, 80.0, 1);
+
+  `);
+
+  refreshTables();
+}
+
+
+// ==================================================
+// RUN SQL
+// ==================================================
+
+function runSQL() {
+
+  if (!db) {
+
+    showMessage(
+      "SQL database is still loading. Please try again.",
+      "error"
+    );
+
+    return;
+  }
+
+  let query = document
+    .getElementById("sqlEditor")
+    .value;
+
+
+  // Allow lines beginning with // to be used as comments
+  query = query
+    .split("\n")
+    .filter(line => !line.trim().startsWith("//"))
+    .join("\n")
+    .trim();
+
+
+  const resultsBox =
+    document.getElementById("results");
+
+
+  // Empty SQL
+  if (!query) {
+
+    showMessage(
+      "SQL Error: Please enter a SQL statement.",
+      "error"
+    );
+
+    resultsBox.innerHTML =
+      "<p>❌ No SQL statement entered.</p>";
+
+    return;
+  }
+
+
+  try {
+
+    const results = db.exec(query);
+
+    displayResults(results);
+
+    refreshTables();
+
+    showMessage(
+      "✓ SQL executed successfully.",
+      "success"
+    );
+
+  } catch (error) {
+
+    console.error("SQL Error:", error);
+
+    showMessage(
+      "❌ SQL Error: " + error.message,
+      "error"
+    );
+
+    resultsBox.innerHTML =
+      "<p><strong>❌ SQL Error</strong></p>" +
+      "<pre style='white-space:pre-wrap;color:#b91c1c;'>" +
+      escapeHTML(error.message) +
+      "</pre>";
+  }
+}
+
+
+// ==================================================
+// DISPLAY RESULTS
+// ==================================================
+
+function displayResults(results) {
+
+  const output =
+    document.getElementById("results");
+
+  if (results.length === 0) {
+
+    output.innerHTML =
+      "<p>Command completed successfully.</p>";
+
+    return;
+  }
+
+  let html = "";
+
+  results.forEach(result => {
+
+    html += '<div class="table-wrapper">';
+    html += "<table>";
+
+    html += "<thead><tr>";
+
+    result.columns.forEach(column => {
+
+      html +=
+        "<th>" +
+        escapeHTML(column) +
+        "</th>";
+    });
+
+    html += "</tr></thead><tbody>";
+
+
+    result.values.forEach(row => {
+
+      html += "<tr>";
+
+      row.forEach(value => {
+
+        html +=
+          "<td>" +
+          escapeHTML(
+            value === null
+              ? "NULL"
+              : String(value)
+          ) +
+          "</td>";
+      });
+
+      html += "</tr>";
+    });
+
+    html += "</tbody></table>";
+    html += "</div>";
+  });
+
+  output.innerHTML = html;
+}
+
+
+// ==================================================
+// TABLE LIST
+// ==================================================
+
+function refreshTables() {
+
+  const list =
+    document.getElementById("tables");
+
+  list.innerHTML = "";
+
+  try {
+
+    const result = db.exec(`
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table'
+      AND name NOT LIKE 'sqlite_%'
+      ORDER BY name;
+    `);
+
+    if (
+      result.length === 0 ||
+      result[0].values.length === 0
+    ) {
+
+      list.innerHTML =
+        "<li>No tables</li>";
+
+      return;
+    }
+
+    result[0].values.forEach(row => {
+
+      const tableName = row[0];
+
+      const item =
+        document.createElement("li");
+
+      item.textContent =
+        "▦ " + tableName;
+
+      item.onclick = () =>
+        viewTable(tableName);
+
+      list.appendChild(item);
+    });
+
+  } catch (error) {
+
+    console.error("Could not refresh tables:", error);
+
+    list.innerHTML =
+      "<li>Could not load tables</li>";
+  }
+}
+
+
+// ==================================================
+// VIEW TABLE
+// ==================================================
+
+function viewTable(tableName) {
+
+  const safeName =
+    tableName.replace(/"/g, '""');
+
+  document.getElementById(
+    "sqlEditor"
+  ).value =
+    `SELECT * FROM "${safeName}";`;
+
+  runSQL();
+}
+
+
+// ==================================================
+// IMPORT DATABASE
+// ==================================================
+
+document.getElementById(
+  "databaseFile"
+).addEventListener(
+  "change",
+  async function(event) {
+
+    const file =
+      event.target.files[0];
+
+    if (!file) return;
+
+    try {
+
+      const buffer =
+        await file.arrayBuffer();
+
+      const data =
+        new Uint8Array(buffer);
+
+      const newDatabase =
+        new SQL.Database(data);
+
+      if (db) {
+        db.close();
+      }
+
+      db = newDatabase;
+
+      refreshTables();
+
+      document.getElementById(
+        "results"
+      ).innerHTML =
+        "<p>Database imported successfully.</p>";
+
+      showMessage(
+        "Loaded database: " + file.name,
+        "success"
+      );
+
+    } catch (error) {
+
+      showMessage(
+        "Could not open database: " +
+        error.message,
+        "error"
+      );
+    }
+
+    event.target.value = "";
+  }
+);
+
+
+// ==================================================
+// IMPORT SQL FILE
+// ==================================================
+
+document.getElementById(
+  "sqlFile"
+).addEventListener(
+  "change",
+  async function(event) {
+
+    const file =
+      event.target.files[0];
+
+    if (!file) return;
+
+    try {
+
+      const text =
+        await file.text();
+
+      document.getElementById(
+        "sqlEditor"
+      ).value = text;
+
+      showMessage(
+        "SQL file loaded into the editor. Press Run SQL to execute it.",
+        "success"
+      );
+
+    } catch (error) {
+
+      showMessage(
+        "Could not read SQL file.",
+        "error"
+      );
+    }
+
+    event.target.value = "";
+  }
+);
+
+
+// ==================================================
+// EXPORT DATABASE
+// ==================================================
+
+function exportDatabase() {
+
+  if (!db) {
+
+    showMessage(
+      "Database is not ready yet.",
+      "error"
+    );
+
+    return;
+  }
+
+  const data =
+    db.export();
+
+  const blob =
+    new Blob(
+      [data],
+      {
+        type: "application/x-sqlite3"
+      }
+    );
+
+  const url =
+    URL.createObjectURL(blob);
+
+  const link =
+    document.createElement("a");
+
+  link.href = url;
+
+  link.download =
+    "student-database.sqlite";
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  link.remove();
+
+  URL.revokeObjectURL(url);
+
+  showMessage(
+    "Database exported.",
+    "success"
+  );
+}
+
+
+// ==================================================
+// EXAMPLE
+// ==================================================
+
+function loadExample() {
+
+  document.getElementById(
+    "sqlEditor"
+  ).value =
+`// Example: Find students aged 15 or above
+
+SELECT
+  first_name,
+  last_name,
+  age,
+  class_name
+FROM students
+WHERE age >= 15
+ORDER BY age DESC;`;
+}
+
+
+// ==================================================
+// RESET
+// ==================================================
+
+function resetDatabase() {
+
+  const confirmed =
+    confirm(
+      "Reset the database? Your current changes will be lost."
+    );
+
+  if (!confirmed) return;
+
+  createDefaultDatabase();
+
+  document.getElementById(
+    "sqlEditor"
+  ).value =
+    "SELECT * FROM students;";
+
+  document.getElementById(
+    "results"
+  ).innerHTML =
+    "<p>Database reset.</p>";
+
+  showMessage(
+    "Database reset successfully.",
+    "success"
+  );
+}
+
+
+// ==================================================
+// MESSAGE
+// ==================================================
+
+function showMessage(text, type) {
+
+  const box =
+    document.getElementById("message");
+
+  box.textContent = text;
+
+  box.className =
+    type === "success"
+      ? "message-success"
+      : "message-error";
+}
+
+
+// ==================================================
+// HTML SAFETY
+// ==================================================
+
+function escapeHTML(value) {
+
+  const div =
+    document.createElement("div");
+
+  div.textContent = value;
+
+  return div.innerHTML;
+}
+
+
+// ==================================================
+// START APPLICATION
+// ==================================================
+
+start();
+
+</script>
+
+</body>
+</html>      max-width: 1300px;
       margin: 22px auto;
       padding: 0 20px;
     }
