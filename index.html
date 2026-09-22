@@ -390,35 +390,63 @@ function createDefaultDatabase() {
 
 function runSQL() {
 
-  if (!db) return;
+  if (!db) {
+    showMessage(
+      "SQL database is still loading. Please try again.",
+      "error"
+    );
+    return;
+  }
 
-  const query =
-    document.getElementById("sqlEditor").value;
+  const query = document
+    .getElementById("sqlEditor")
+    .value
+    .trim();
+
+  const resultsBox =
+    document.getElementById("results");
+
+  // Empty SQL
+  if (!query) {
+    showMessage(
+      "SQL Error: Please enter a SQL statement.",
+      "error"
+    );
+
+    resultsBox.innerHTML =
+      "<p>❌ No SQL statement entered.</p>";
+
+    return;
+  }
 
   try {
 
     const results = db.exec(query);
 
     displayResults(results);
-
     refreshTables();
 
     showMessage(
-      "SQL executed successfully.",
+      "✓ SQL executed successfully.",
       "success"
     );
 
   } catch (error) {
 
+    console.error("SQL Error:", error);
+
     showMessage(
-      error.message,
+      "❌ SQL Error: " + error.message,
       "error"
     );
 
+    resultsBox.innerHTML =
+      "<p><strong>❌ SQL Error</strong></p>" +
+      "<pre style='white-space:pre-wrap;color:#b91c1c;'>" +
+      escapeHTML(error.message) +
+      "</pre>";
   }
-
 }
-
 
 // -----------------------
 // DISPLAY RESULTS
