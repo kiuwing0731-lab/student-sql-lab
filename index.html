@@ -515,6 +515,14 @@ function runSQL() {
     .trim();
 
 
+  // ==================================================
+  // SUPPORT MINUS
+  // ==================================================
+  // SQLite normally uses EXCEPT.
+  // Allow students to type MINUS instead.
+  query = query.replace(/\bMINUS\b/gi, "EXCEPT");
+
+
   const resultsBox =
     document.getElementById("results");
 
@@ -954,4 +962,4 @@ start();
 </script>
 
 </body>
-</html>    
+</html>
